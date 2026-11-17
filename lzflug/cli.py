@@ -45,6 +45,11 @@ def main(argv: list[str] | None = None) -> None:
     q.add_argument("--eur-pro-km", type=float, default=0.25)
     q.add_argument("--anzahl", type=int, default=15)
 
+    argv = sys.argv[1:] if argv is None else argv
+    if not argv:  # Doppelklick / ohne Befehl: App-Modus mit Browser
+        from .app import main as app_main
+        app_main()
+        return
     a = p.parse_args(argv)
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(message)s")
     if a.befehl == "server":

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-DATEN = Path(__file__).resolve().parent.parent / "data" / "airports.json"
+DATEN = Path(__file__).resolve().parent / "data" / "airports.json"
 
 KONTINENTE = {
     "EU": "Europa",

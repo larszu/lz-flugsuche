@@ -1,4 +1,4 @@
-"""Erzeugt data/airports.json aus den OurAirports-Daten (gemeinfrei).
+"""Erzeugt lzflug/data/airports.json aus den OurAirports-Daten (gemeinfrei).
 
 Aufruf: python scripts/airports_update.py [airports.csv countries.csv]
 Ohne Argumente werden die CSVs von davidmegginson.github.io geladen.
@@ -12,7 +12,7 @@ import urllib.request
 from pathlib import Path
 
 BASIS = "https://davidmegginson.github.io/ourairports-data/"
-ZIEL = Path(__file__).resolve().parent.parent / "data" / "airports.json"
+ZIEL = Path(__file__).resolve().parent.parent / "lzflug" / "data" / "airports.json"
 GROESSE = {"large_airport": 3, "medium_airport": 2, "small_airport": 1}
 
 

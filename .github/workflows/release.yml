@@ -1,0 +1,162 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Wie cable-planner: Matrix-Build je Plattform, Vollständigkeitsprüfung,
+# Release mit allen Dateien, danach die Tag-Version zurück nach main.
+# Gepackt wird mit PyInstaller über packaging/build.py (lokal identisch).
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows-x64
+          - os: macos-latest
+            name: macos-arm64
+          - os: macos-15-intel
+            name: macos-x64
+          # glibc 2.35 wie cable-planner/lz-scopes: Debian 12, Ubuntu 22.04+, Raspberry Pi OS 12
+          - os: ubuntu-22.04
+            name: linux-x64
+          - os: ubuntu-22.04-arm
+            name: linux-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        shell: bash
+        run: |
+          set -eu
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test,build]"
+
+      - name: Tests
+        shell: bash
+        run: python -m pytest -q
+
+      - name: Build
+        # bash auf allen Systemen, damit Fehler den Lauf wirklich abbrechen
+        # (pwsh hat bei cable-planner Exit-Codes verschluckt).
+        shell: bash
+        run: |
+          set -euxo pipefail
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            python packaging/build.py "${GITHUB_REF#refs/tags/v}"
+          else
+            python packaging/build.py
+          fi
+
+      - name: Startprobe
+        # Gepackte App einmal starten: Kommandozeile mit --help muss laufen.
+        shell: bash
+        run: |
+          set -eu
+          case "${RUNNER_OS}" in
+            macOS)   dist/LZ-Flugsuche.app/Contents/MacOS/LZ-Flugsuche suche --help ;;
+            Windows) dist/LZ-Flugsuche.exe suche --help ;;
+            Linux)   dist/LZ-Flugsuche suche --help ;;
+          esac
+
+      - name: List release/ contents
+        shell: bash
+        run: ls -lh release/ || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: lz-flugsuche-${{ matrix.name }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.tar.gz
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: Release-Vollstaendigkeit pruefen
+        # Ein halbes Release ist schlimmer als keines: es sieht auf der
+        # Release-Seite vollständig aus. Jede Plattform muss da sein.
+        shell: bash
+        run: |
+          set -eu
+          find artifacts -type f | sort
+          fehlt=0
+          pruefe() {
+            if [ "$(find artifacts -type f -name "$1" | wc -l | tr -d ' ')" -ge 1 ]; then
+              echo "ok   $1"
+            else
+              echo "FEHLT $1 -- $2"; fehlt=1
+            fi
+          }
+          pruefe '*-win-x64.exe'         'Windows'
+          pruefe '*-mac-arm64.dmg'       'macOS Apple Silicon'
+          pruefe '*-mac-x64.dmg'         'macOS Intel'
+          pruefe '*-linux-x64.tar.gz'    'Linux x64'
+          pruefe '*-linux-arm64.tar.gz'  'Linux arm64'
+          [ "$fehlt" -eq 0 ] || { echo "Erst den fehlenden Build-Job reparieren, dann den Tag neu setzen."; exit 1; }
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            artifacts/**/*.exe
+            artifacts/**/*.dmg
+            artifacts/**/*.tar.gz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Tag-Version nach main zurückschreiben, damit __init__.py und pyproject.toml
+  # nicht hinter den Tags zurückbleiben (wie cable-planner #569).
+  sync-version-to-main:
+    needs: release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Version setzen und committen
+        shell: bash
+        run: |
+          set -eu
+          V="${GITHUB_REF#refs/tags/v}"
+          sed -i -E "s/^__version__ = \"[^\"]*\"/__version__ = \"${V}\"/" lzflug/__init__.py
+          sed -i -E "0,/^version = \"[^\"]*\"/s//version = \"${V}\"/" pyproject.toml
+          if git diff --quiet; then echo "Bereits auf ${V}."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Version ${V} nach Release übernehmen"
+          git push origin HEAD:main

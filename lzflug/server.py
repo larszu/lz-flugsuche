@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import threading
+import time
 import uuid
 from datetime import date
 from pathlib import Path
@@ -47,6 +48,17 @@ class Auftrag:
 
 
 AUFTRAEGE: dict[str, Auftrag] = {}
+LEBENSZEICHEN = [time.monotonic()]  # letzte Meldung der Oberfläche (für die gepackte App)
+
+
+def sucht_gerade() -> bool:
+    return any(not a.fertig for a in AUFTRAEGE.values())
+
+
+@app.post("/api/lebenszeichen")
+def lebenszeichen():
+    LEBENSZEICHEN[0] = time.monotonic()
+    return {"ok": True}
 
 
 def _ausfuehren(auftrag: Auftrag) -> None:

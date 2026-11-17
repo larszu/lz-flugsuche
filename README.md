@@ -18,9 +18,17 @@ Findet den günstigsten Flug – nicht nur ab dem Heimatflughafen, sondern ab **
 
 Jeder gefundene Preis wird lokal gespeichert (`~/.lz-flugsuche/preise.sqlite`); die Karte zeigt, ob er der tiefste bisher gesehene ist.
 
-Grundlage ist die Recherche in `~/reports/Günstigste Flüge finden.md`: Preise steigen nicht durch wiederholtes Suchen, sondern weil Buchungsklassen ausverkaufen und Portale alte Cache-Preise zeigen. VPN bringt ab der EU praktisch nichts.
+Grundlage ist eine eigene Recherche (11/2026): Preise steigen nicht durch wiederholtes Suchen, sondern weil Buchungsklassen ausverkaufen und Portale alte Cache-Preise zeigen. VPN bringt ab der EU praktisch nichts.
 
-## Starten
+## Herunterladen
+
+Fertige Programme für Windows, macOS (Apple Silicon und Intel) und Linux liegen unter [Releases](../../releases/latest). Doppelklick startet die App und öffnet die Oberfläche im Browser; ist kein Tab mehr offen, beendet sie sich nach drei Minuten von selbst.
+
+- **macOS:** Die App ist nicht von Apple beglaubigt. Beim ersten Start Rechtsklick → *Öffnen*, oder im Terminal `xattr -dr com.apple.quarantine /Applications/LZ-Flugsuche.app`.
+- **Windows:** SmartScreen meldet einen unbekannten Herausgeber → *Weitere Informationen* → *Trotzdem ausführen*.
+- **Linux:** Archiv entpacken, `./LZ-Flugsuche` starten.
+
+## Aus dem Quellcode starten
 
 ```bash
 python3.12 -m venv .venv
@@ -52,11 +60,23 @@ Zwischenergebnisse erscheinen in der Oberfläche schon während der Suche.
 |---|---|---|
 | Google Flights | Bibliothek [`fli`](https://github.com/punitarani/fli) (PyPI `flights`), inoffiziell | Google bremst bei vielen Anfragen (HTTP 429); hier höchstens 2 gleichzeitig, bei 429 20 s Pause. Kann bei Formatänderungen ausfallen |
 | Ryanair | `farfnd/v4` oneWayFares / roundTripFares, inoffiziell | Basistarif ohne Gepäck, Preis pro Person × Anzahl |
-| Flughäfen | [OurAirports](https://ourairports.com/data/) (gemeinfrei) → `data/airports.json` | Aktualisieren: `python scripts/airports_update.py` |
+| Flughäfen | [OurAirports](https://ourairports.com/data/) (gemeinfrei) → `lzflug/data/airports.json` | Aktualisieren: `python scripts/airports_update.py` |
 
 Nicht angebunden (Stand 11/2026): Amadeus Self-Service ist abgeschaltet, Kiwi Tequila und Skyscanner nur für Partner. Wizz Air und easyJet erscheinen über Google.
 
 Die Abfragen sind für den privaten Gebrauch gedacht: wenige, gedrosselte Anfragen, keine Umgehung von Schutzmaßnahmen.
+
+## Rechtliches
+
+- lz-flugsuche ist ein privates, nicht kommerzielles Werkzeug. Es steht in keiner Verbindung zu Google, Ryanair oder anderen Airlines; deren Namen und Marken gehören den jeweiligen Inhabern.
+- Die Preise kommen aus **inoffiziellen, öffentlich erreichbaren Schnittstellen**, die auch die Websites selbst nutzen. Es werden keine Anmeldungen, Bezahlschranken oder Schutzmaßnahmen umgangen, die Abfragen sind gedrosselt. Die Nutzungsbedingungen der Anbieter gelten für jeden, der das Programm benutzt – wer es einsetzt, ist für deren Einhaltung selbst verantwortlich. Gewerbliche Nutzung, Weiterverkauf von Daten oder ein Betrieb als Dienst für andere sind nicht vorgesehen und laut [LICENSE](LICENSE) untersagt.
+- Gebucht wird immer direkt bei Airline oder Portal; lz-flugsuche verkauft nichts und erhält keine Provision.
+- Alle Preise ohne Gewähr. Verbindlich ist allein der Preis beim Anbieter im Buchungsschritt.
+- Drittanbieter-Lizenzen: Public Sans (SIL OFL 1.1), Flughafendaten von OurAirports (gemeinfrei), Python-Bibliotheken unter ihren eigenen Lizenzen; die Liste liegt jedem Release als `THIRD-PARTY-LICENSES.txt` bei.
+
+## Release
+
+Tag `v*` setzen und pushen – `.github/workflows/release.yml` baut auf Windows, macOS (arm64 und x64) und Linux (x64 und arm64) mit PyInstaller (`packaging/build.py`, lokal genauso aufrufbar), prüft, dass jede Plattform da ist, hängt alles ans Release und schreibt die Version zurück nach `main`.
 
 ## Entwicklung
 
@@ -71,6 +91,8 @@ Die Abfragen sind für den privaten Gebrauch gedacht: wenige, gedrosselte Anfrag
 | `lzflug/airports.py` | Umkreis, Länder, Kontinente, Namenssuche |
 | `lzflug/server.py` | FastAPI, Suche als Hintergrundauftrag mit Fortschritt |
 | `lzflug/static/` | Oberfläche (LZM-Web-Stil, hell und dunkel) |
+| `lzflug/app.py` | Einstieg der gepackten App (Browser öffnen, Leerlauf-Ende) |
+| `packaging/build.py` | PyInstaller-Bau für alle Plattformen |
 
 ## Noch offen
 

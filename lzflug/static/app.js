@@ -102,6 +102,11 @@ $('#bis').value = iso(new Date(heute.getTime() + 45 * 864e5));
 })();
 zielfelder(); reisefelder();
 
+/* ---------- Lebenszeichen (die gepackte App beendet sich, wenn kein Tab mehr offen ist) ---------- */
+const melden = () => fetch('/api/lebenszeichen', { method: 'POST' }).catch(() => {});
+melden(); setInterval(melden, 20000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) melden(); });
+
 /* ---------- Suche ---------- */
 let laufend = null, letztes = null;
 
