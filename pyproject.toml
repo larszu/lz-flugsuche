@@ -1,6 +1,6 @@
 [project]
 name = "lz-flugsuche"
-version = "0.1.0"
+version = "0.2.0"
 description = "Günstigste Flüge ab allen Flughäfen in der Umgebung – auch zu Land, Kontinent oder überallhin"
 requires-python = ">=3.11"
 dependencies = [
