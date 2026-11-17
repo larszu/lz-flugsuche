@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Flugsuche</title>
+<link rel="icon" href="lzm_signet_navy_1c.svg" type="image/svg+xml">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="kopf">
+  <div class="kopf-innen">
+    <a class="marke" href="/" aria-label="Flugsuche – Start">
+      <img class="logo logo-hell" src="lzm_signet_navy_1c.svg" alt="" width="40" height="24">
+      <img class="logo logo-dunkel" src="lzm_signet_offwhite_1c.svg" alt="" width="40" height="24">
+      <span>Flugsuche</span>
+    </a>
+    <div class="thema" role="radiogroup" aria-label="Darstellung">
+      <button type="button" data-thema="auto" role="radio" aria-label="Automatisch" title="Automatisch">A</button>
+      <button type="button" data-thema="light" role="radio" aria-label="Hell" title="Hell">☀</button>
+      <button type="button" data-thema="dark" role="radio" aria-label="Dunkel" title="Dunkel">☾</button>
+    </div>
+  </div>
+</header>
+
+<main class="seite">
+  <form id="suche" class="karte formular" autocomplete="off">
+    <h1>Günstig fliegen</h1>
+    <p class="meta">Durchsucht alle Flughäfen in deiner Nähe und rechnet die Anreise mit ein.</p>
+
+    <fieldset class="gruppe">
+      <legend>Abflug</legend>
+      <div class="feld auswahl">
+        <label for="start">Heimatflughafen oder Ort</label>
+        <input id="start" name="start" placeholder="z. B. Frankfurt oder FRA" required>
+        <ul class="vorschlaege" id="start-liste" role="listbox" hidden></ul>
+      </div>
+      <div class="feld">
+        <label for="radius">Umkreis <output id="radius-wert">200 km</output></label>
+        <input id="radius" name="radius_km" type="range" min="0" max="400" step="25" value="200">
+      </div>
+    </fieldset>
+
+    <fieldset class="gruppe">
+      <legend>Ziel</legend>
+      <div class="segment" role="radiogroup" aria-label="Zielart">
+        <label><input type="radio" name="ziel_art" value="ueberall" checked><span>Überallhin</span></label>
+        <label><input type="radio" name="ziel_art" value="kontinent"><span>Kontinent</span></label>
+        <label><input type="radio" name="ziel_art" value="land"><span>Land</span></label>
+        <label><input type="radio" name="ziel_art" value="flughafen"><span>Flughafen</span></label>
+      </div>
+      <div class="feld" data-fuer="kontinent" hidden>
+        <label for="kontinent">Kontinent</label>
+        <select id="kontinent"></select>
+      </div>
+      <div class="feld" data-fuer="land" hidden>
+        <label for="land">Land</label>
+        <select id="land"></select>
+      </div>
+      <div class="feld auswahl" data-fuer="flughafen" hidden>
+        <label for="zielflughafen">Zielflughafen oder Ort</label>
+        <input id="zielflughafen" placeholder="z. B. Barcelona oder BCN">
+        <ul class="vorschlaege" id="ziel-liste" role="listbox" hidden></ul>
+      </div>
+    </fieldset>
+
+    <fieldset class="gruppe">
+      <legend>Wann</legend>
+      <div class="zwei">
+        <div class="feld"><label for="von">Frühester Abflug</label><input id="von" type="date" required></div>
+        <div class="feld"><label for="bis">Spätester Abflug</label><input id="bis" type="date" required></div>
+      </div>
+      <div class="segment" role="radiogroup" aria-label="Reiseart">
+        <label><input type="radio" name="reise" value="hin" checked><span>Nur Hinflug</span></label>
+        <label><input type="radio" name="reise" value="rueck"><span>Hin und zurück</span></label>
+      </div>
+      <div class="feld" data-fuer-reise="rueck" hidden>
+        <label for="naechte">Nächte vor Ort</label>
+        <input id="naechte" type="number" min="1" max="60" value="4">
+      </div>
+    </fieldset>
+
+    <details class="mehr">
+      <summary>Personen, Gepäck und Anreise</summary>
+      <div class="zwei">
+        <div class="feld"><label for="erwachsene">Personen</label><input id="erwachsene" type="number" min="1" max="9" value="1"></div>
+        <div class="feld"><label for="gepaeck">Gepäck</label>
+          <select id="gepaeck">
+            <option value="keins">Nur kleine Tasche</option>
+            <option value="handgepaeck">Handgepäck-Koffer</option>
+            <option value="koffer">1 Aufgabegepäck</option>
+          </select>
+        </div>
+        <div class="feld"><label for="eurkm">Anreise, € pro km</label><input id="eurkm" type="number" min="0" max="3" step="0.05" value="0.25"></div>
+        <div class="feld"><label for="live">Live prüfen (beste Treffer)</label><input id="live" type="number" min="0" max="20" value="8"></div>
+      </div>
+      <label class="schalter"><input id="direkt" type="checkbox"> Nur Direktflüge</label>
+    </details>
+
+    <button class="haupt" type="submit" id="los">Günstigste Flüge suchen</button>
+  </form>
+
+  <section class="ergebnisse" aria-live="polite">
+    <div id="stand" class="karte stand" hidden>
+      <div class="stand-zeile"><span id="schritt">Vorbereiten</span><button type="button" id="stopp" class="leise">Abbrechen</button></div>
+      <progress id="balken" max="1" value="0"></progress>
+    </div>
+    <div id="fehler" class="hinweis fehler" hidden></div>
+    <div id="leer" class="leer">
+      <h2>Wohin soll es gehen?</h2>
+      <p>Heimatflughafen eintragen, Ziel wählen – oder einfach „Überallhin“ – und suchen. Die Suche dauert je nach Umfang ein bis drei Minuten; erste Treffer erscheinen früher.</p>
+    </div>
+    <div id="kopfzeile" hidden>
+      <div class="zusammenfassung" id="zusammenfassung"></div>
+      <div class="abflughaefen" id="abflughaefen"></div>
+      <div id="hinweise"></div>
+      <div class="sortierung segment klein" role="radiogroup" aria-label="Sortierung">
+        <label><input type="radio" name="sort" value="gesamt" checked><span>Mit Anreise</span></label>
+        <label><input type="radio" name="sort" value="preis"><span>Nur Flugpreis</span></label>
+      </div>
+    </div>
+    <ol id="liste" class="liste"></ol>
+  </section>
+</main>
+<script src="app.js" type="module"></script>
+</body>
+</html>
